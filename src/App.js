@@ -1,102 +1,135 @@
-import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
-import './index.css';
+import React, { Component, Fragment } from 'react';
 import './App.css';
-import llama from "./llama.jpg";
+import TweetBox from './TweetBox';
+import Feed from './Feed';
+import axios from 'axios';
 
-
-class Bar extends Component{ // function sintax
-  render(){
-  return(
-        <div>
-          <img className="llama" src={llama} />
-        </div> 
-  );
-  }
-}
-
-
-function Tweets (props){ // function sintax
-  return(
-    <div className="tweet2">
-      <img className="llama" src={llama} />
-      <div className="column">
-        <div>{props.name}</div>
-        <div>{props.message}</div> 
-      </div>
-      <div className="date">{props.date}</div>
-      
-    </div>
-  );
-}
-
-
-
-class Dashboard extends Component {
+class App extends Component {
   constructor(props){
     super(props);
-    this.state={
-      tweets: []
-      };
-      this.myRef= React.createRef();
+    this.state = {
+      tweets: [],
+      id:0,
+      error: null,
+      isLoaded: true
+    }
+
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleDelete = this.handleDelete.bind(this);
   }
 
-handleClick =()=>{
- 
-   const tweets = this.state.tweets.slice();
-    this.myRef.current.focus();
-    this.setState({
-      tweets: [...tweets, {name:"Gerardo", date:"11-03-2019", message:this.myRef.current.value} ],
-    } );
-    this.myRef.current.value="";
-    
-}
+  componentDidMount() {
+    fetch("https://still-garden-88285.herokuapp.com/draft_tweets")
+      .then(res => res.json())
+      .then(
+        (result) => {
+          this.setState({
+            isLoaded: true,
+            id: result.draft_tweets.id,
+            tweets: result.draft_tweets
+          })
+        },
+        (error) => {
+          this.setState({
+            isLoaded: true,
+            error: error
+          })
+        }
+      )
+  }
 
+  handleSubmit(newText) {
+    this.setState({isLoaded: false});
 
- handleChange =()=>{
-   this.myRef.current.focus();
-}
+    // Static UI :(
+    // let newTweet = {
+    //   id: this.state.tweets.length + 1,
+    //   user_name: 'Yvone',
+    //   avatar: 'https://img.ifcdn.com/images/d3951bf44788590b80f69c0c65718f7a23eb33c645cb677ee335f81a6e785ee6_3.jpg',
+    //   created_at: '11-03-2019',
+    //   description: newText
+    // };
 
+    // let tweets = this.state.tweets.slice();
 
-    render(){
-      const array = this.state.tweets;
-      const myTweets = array.map((step, index) => {
-        return (
-          <Tweets 
-                className="actualTweet"
-                name={this.state.tweets[index].name} 
-                date={this.state.tweets[index].date}
-                message={this.state.tweets[index].message} 
-              />
-        );
-       });
-      return(
-          <div >
-          <div>
-            <div className="tweet">
-              <Bar
-                ref={this.myRef} 
-                onClick={()=> this.handleClick() } 
-                onChange={()=> this.handleChange()}
-              />
-              <div className="upperBar">
-                <input className="text"type="text" ref={this.myRef} placeholder="What´s happening?" onChange={()=>this.handleChange()}  />
-                <button className="myButton"onClick={()=>this.handleClick()}>Tweet</button>
-              </div>
-            </div>
-            </div>
+    // this.setState({ tweets: tweets.concat(newTweet) });
 
-            <div className="actualTweet">
-              {myTweets}
-            </div>
-          </div>
+    // Dynamic UI !
+    let newTweet = {
+      user_name: 'Yvone',
+      avatar: 'https://img.ifcdn.com/images/d3951bf44788590b80f69c0c65718f7a23eb33c645cb677ee335f81a6e785ee6_3.jpg',
+      description: newText
+    };
+
+    let headers = {};
+    headers['Content-Type'] = 'application/json';
+
+    const options = {
+      headers: headers,
+      method: 'POST',
+      // credentials: 'include',
+      body: JSON.stringify(newTweet)
+    };
+
+    fetch("https://still-garden-88285.herokuapp.com/draft_tweets", options)
+      .then(res => res.json())
+      .then(
+        (result) => {
+          let newTweets = this.state.tweets.slice();
+
+          this.setState({
+            isLoaded: true,
+            tweets: newTweets.concat(result.draft_tweet)
+          });
+        },
+        (error) => {
+          this.setState({
+            isLoaded: true,
+            error
+          });
+        }
+      )
+  }
+  handleDelete(id, index){
+    axios.delete("https://still-garden-88285.herokuapp.com/draft_tweets"+id)
+    .then(res => res.json())
+    .then(
+      const tweets=[...this.state.tweets];
+      tweets.splice(index,1);
+      this.setState({tweets:tweets});
+      )
+
+  }
+
+  render() {
+    const { error, isLoaded, tweets } = this.state;
+    let content;
+
+    if (error) {
+      content = <div>Error: {error.message}</div>;
+    } else {
+      return (
+        content = (
+          <Fragment>
+            <TweetBox
+              onSubmitNewTweet={this.handleSubmit}
+            />
+            <Feed 
+              tweets={tweets}
+              isLoaded={isLoaded}
+              handleDelete={this.handleDelete}
+            />
+          </Fragment>
+        )
       );
     }
+
+    return (
+      <div className="App">
+        { content }
+      </div>
+    )
+  }
 }
 
-export default Dashboard;
-
-//<input type="text" value={this.state.value} onChange={this.handleChange} />
-
-
-
+export default App;
